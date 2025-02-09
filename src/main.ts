@@ -1,24 +1,33 @@
-import * as THREE from 'three';
+document.addEventListener("DOMContentLoaded", () => {
+  const buttonContainer = document.getElementById("button-container");
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
+  document.querySelectorAll(".start-btn").forEach(button => {
+      button.addEventListener("click", (event) => {
+          const option = event.target.getAttribute("data-option");
+          buttonContainer.style.display = "none"; // Oculta el menú
+          loadApp(option);
+      });
+  });
 
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+  function loadApp(option) {
+      const container = document.getElementById("app-container");
+      if (!container) {
+          const newContainer = document.createElement("div");
+          newContainer.id = "app-container";
+          document.body.appendChild(newContainer);
+      } else {
+          container.innerHTML = ""; // Limpia la escena
+      }
 
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+      import("./app.js").then(module => {
+          const app = new module.App(option);
+          app.init();
+      });
+  }
 
-camera.position.z = 5;
-
-function animate() {
-  requestAnimationFrame(animate);
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
-  renderer.render(scene, camera);
-}
-
-animate();
+  document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+          buttonContainer.style.display = "flex"; // Muestra el menú
+      }
+  });
+});
