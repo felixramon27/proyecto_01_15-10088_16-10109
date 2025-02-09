@@ -4,6 +4,8 @@ import vertexShader from './shaders/wave_vertex.glsl';
 import fragmentShader from './shaders/wave_fragment.glsl';
 import altVertexShader from './shaders/alternative_vertex.glsl';
 import altFragmentShader from './shaders/alternative_fragment.glsl';
+import creativeVertexShader from './shaders/creative_vertex.glsl';
+import creativeFragmentShader from './shaders/creative_fragment.glsl';
 
 export class App {
     private scene: THREE.Scene;
@@ -13,6 +15,7 @@ export class App {
     private activeMaterial: THREE.RawShaderMaterial;
     private waveMaterial: THREE.RawShaderMaterial;
     private altMaterial: THREE.RawShaderMaterial;
+    private creativeMaterial: THREE.RawShaderMaterial;
     private startTime: number;
     private gui: GUI;
     private option: string;
@@ -23,7 +26,7 @@ export class App {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.z = 5;
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         
         const container = document.getElementById('app-container');
@@ -48,7 +51,16 @@ export class App {
 
     private createScene(): void {
         const resolution = new THREE.Vector2(window.innerWidth, window.innerHeight);
-        const geometry = new THREE.PlaneGeometry(2, 2, 50, 50);
+        // 1. Determinar la geometría según la opción seleccionada
+        let geometry: THREE.BufferGeometry;
+        if (this.option === 'creative') {
+            geometry = new THREE.SphereGeometry(1, 32, 32);
+        } else {
+            geometry = new THREE.PlaneGeometry(2, 2, 50, 50);
+        }
+
+        // 2. Calcular normales para ambas geometrías
+        geometry.computeVertexNormals();
 
         this.waveMaterial = new THREE.RawShaderMaterial({
             vertexShader,
@@ -75,7 +87,36 @@ export class App {
             glslVersion: THREE.GLSL3,
         });
 
-        this.activeMaterial = this.option === 'alternative' ? this.altMaterial : this.waveMaterial;
+        this.creativeMaterial = new THREE.RawShaderMaterial({
+            vertexShader: creativeVertexShader,
+            fragmentShader: creativeFragmentShader,
+            uniforms: {
+                time: { value: 0.0 },
+                inflate: { value: 0.5 },
+                waveAmplitude: { value: 0.2 },
+                waveSpeed: { value: 1.0 },
+                toonLevels: { value: 3.0 },
+                lightColor: { value: new THREE.Color(1, 1, 1) },
+                materialColor: { value: new THREE.Color(0.2, 0.5, 1.0) },
+                modelMatrix: { value: new THREE.Matrix4() },
+                viewMatrix: { value: new THREE.Matrix4() },
+                projectionMatrix: { value: new THREE.Matrix4() }
+            },
+            glslVersion: THREE.GLSL3,
+        });
+
+        // this.activeMaterial = this.option === 'alternative' ? this.altMaterial : this.waveMaterial;
+        // Actualiza la lógica de selección de material
+        switch(this.option) {
+            case 'alternative':
+                this.activeMaterial = this.altMaterial;
+                break;
+            case 'creative':
+                this.activeMaterial = this.creativeMaterial;
+                break;
+            default:
+                this.activeMaterial = this.waveMaterial;
+        }
         this.mesh = new THREE.Mesh(geometry, this.activeMaterial);
         this.scene.add(this.mesh);
     }
@@ -88,16 +129,42 @@ export class App {
             this.gui.add(this.activeMaterial.uniforms.amplitude, 'value', 0, 1).name('Amplitude');
             this.gui.add(this.activeMaterial.uniforms.frequency, 'value', 1, 10).name('Frequency');
             this.gui.add(this.activeMaterial.uniforms.smoothness, 'value', 0.1, 2).name('Smoothness');
+        } else if (this.activeMaterial === this.creativeMaterial) {
+            this.gui.add(this.activeMaterial.uniforms.inflate, 'value', 0, 1).name('Inflate');
+            this.gui.add(this.activeMaterial.uniforms.waveAmplitude, 'value', 0, 0.5).name('Wave Amp');
+            this.gui.add(this.activeMaterial.uniforms.waveSpeed, 'value', 0, 3).name('Wave Speed');
+            this.gui.add(this.activeMaterial.uniforms.toonLevels, 'value', 1, 10).step(1).name('Toon Levels');
+            
+            // Agrega controles de color
+            const lightColor = { color: '#ffffff' };
+            const materialColor = { color: '#3399ff' };
+            
+            this.gui.addColor(lightColor, 'color').onChange(val => {
+                this.activeMaterial.uniforms.lightColor.value.setHex(val);
+            }).name('Light Color');
+            
+            this.gui.addColor(materialColor, 'color').onChange(val => {
+                this.activeMaterial.uniforms.materialColor.value.setHex(val);
+            }).name('Material Color');
         } else {
             this.gui.add(this.activeMaterial.uniforms.intensity, 'value', 0, 1).name('Intensity');
             this.gui.add(this.activeMaterial.uniforms.speed, 'value', 0, 5).name('Speed');
         }
+
     }
 
     private animate(): void {
         requestAnimationFrame(() => this.animate());
         this.activeMaterial.uniforms.time.value = (Date.now() - this.startTime) / 1000;
         this.renderer.render(this.scene, this.camera);
+
+        // Actualizar matrices de transformación
+        this.mesh.updateMatrixWorld();
+        if (this.activeMaterial === this.creativeMaterial) {
+            this.activeMaterial.uniforms.modelMatrix.value = this.mesh.matrixWorld;
+            this.activeMaterial.uniforms.viewMatrix.value = this.camera.matrixWorldInverse;
+            this.activeMaterial.uniforms.projectionMatrix.value = this.camera.projectionMatrix;
+        }
     }
 
     private onResize(): void {
