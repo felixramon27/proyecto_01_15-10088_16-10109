@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import vertexShader from './shaders/wave_vertex.glsl';
 import fragmentShader from './shaders/wave_fragment.glsl';
-import altVertexShader from './shaders/alternative_vertex.glsl';
-import altFragmentShader from './shaders/alternative_fragment.glsl';
+import blinnPhongVertexShader from './shaders/blinn_phong_vertex.glsl';
+import blinnPhongFragmentShader from './shaders/blinn_phong_fragment.glsl';
 import creativeVertexShader from './shaders/creative_vertex.glsl';
 import creativeFragmentShader from './shaders/creative_fragment.glsl';
 
@@ -14,7 +14,7 @@ export class App {
     private mesh: THREE.Mesh;
     private activeMaterial: THREE.RawShaderMaterial;
     private waveMaterial: THREE.RawShaderMaterial;
-    private altMaterial: THREE.RawShaderMaterial;
+    private blinnPhongMaterial: THREE.RawShaderMaterial;
     private creativeMaterial: THREE.RawShaderMaterial;
     private startTime: number;
     private gui: GUI;
@@ -74,15 +74,16 @@ export class App {
             },
             glslVersion: THREE.GLSL3,
         });
-
-        this.altMaterial = new THREE.RawShaderMaterial({
-            vertexShader: altVertexShader,
-            fragmentShader: altFragmentShader,
+        this.blinnPhongMaterial = new THREE.RawShaderMaterial({
+            vertexShader: blinnPhongVertexShader,
+            fragmentShader: blinnPhongFragmentShader,
             uniforms: {
                 time: { value: 0.0 },
-                intensity: { value: 0.5 },
-                speed: { value: 2.0 },
-                u_resolution: { value: resolution },
+                lightColor: { value: new THREE.Color(1, 1, 1) },
+                materialColor: { value: new THREE.Color(0.2, 0.5, 1.0) },
+                specularColor: { value: new THREE.Color(1, 1, 1) },
+                shininess: { value: 32.0 },
+                lightPosition: { value: new THREE.Vector3(5, 5, 5) },
             },
             glslVersion: THREE.GLSL3,
         });
@@ -108,8 +109,8 @@ export class App {
         // this.activeMaterial = this.option === 'alternative' ? this.altMaterial : this.waveMaterial;
         // Actualiza la lógica de selección de material
         switch(this.option) {
-            case 'alternative':
-                this.activeMaterial = this.altMaterial;
+            case 'blinn-phong':
+                this.activeMaterial = this.blinnPhongMaterial;
                 break;
             case 'creative':
                 this.activeMaterial = this.creativeMaterial;
@@ -146,7 +147,12 @@ export class App {
             this.gui.addColor(materialColor, 'color').onChange(val => {
                 this.activeMaterial.uniforms.materialColor.value.setHex(val);
             }).name('Material Color');
-        } else {
+        } else if (this.activeMaterial === this.blinnPhongMaterial) {
+            this.gui.add(this.activeMaterial.uniforms.shininess, 'value', 1, 128).name('Shininess');
+            this.gui.addColor({ color: '#ffffff' }, 'color').onChange(val => this.activeMaterial.uniforms.lightColor.value.set(val)).name('Light Color');
+            this.gui.addColor({ color: '#3399ff' }, 'color').onChange(val => this.activeMaterial.uniforms.materialColor.value.set(val)).name('Material Color');
+            this.gui.addColor({ color: '#ffffff' }, 'color').onChange(val => this.activeMaterial.uniforms.specularColor.value.set(val)).name('Specular Color');
+        }else {
             this.gui.add(this.activeMaterial.uniforms.intensity, 'value', 0, 1).name('Intensity');
             this.gui.add(this.activeMaterial.uniforms.speed, 'value', 0, 5).name('Speed');
         }
@@ -155,7 +161,8 @@ export class App {
 
     private animate(): void {
         requestAnimationFrame(() => this.animate());
-        this.activeMaterial.uniforms.time.value = (Date.now() - this.startTime) / 1000;
+
+       this.activeMaterial.uniforms.time.value = (Date.now() - this.startTime) / 1000;
         this.renderer.render(this.scene, this.camera);
 
         // Actualizar matrices de transformación
