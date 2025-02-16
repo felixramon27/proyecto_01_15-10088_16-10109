@@ -1,33 +1,63 @@
+// main.ts actualizado
 document.addEventListener("DOMContentLoaded", () => {
-  const buttonContainer = document.getElementById("button-container");
-
-  document.querySelectorAll(".start-btn").forEach(button => {
-      button.addEventListener("click", (event) => {
-          const option = event.target.getAttribute("data-option");
-          buttonContainer.style.display = "none"; // Oculta el menú
-          loadApp(option);
-      });
+    const mainMenu = document.getElementById("main-menu") as HTMLElement;
+    const controlsPanel = document.getElementById("controls-panel") as HTMLElement;
+    const currentSelection = document.getElementById("current-selection") as HTMLElement;
+    const backButton = document.getElementById("back-btn") as HTMLButtonElement;
+    let currentApp: any = null;
+  
+    // Ocultar controles al inicio
+    controlsPanel.style.display = "none";
+  
+    document.querySelectorAll(".start-btn").forEach(button => {
+        button.addEventListener("click", (event) => {
+            const target = event.target as HTMLElement;
+            const option = target.getAttribute("data-option");
+            
+            // Ocultar menú principal completamente
+            mainMenu.style.display = "none";
+            // Mostrar controles
+            controlsPanel.style.display = "block";
+            currentSelection.textContent = target.textContent;
+  
+            loadApp(option);
+        });
+    });
+  
+    backButton.addEventListener("click", () => {
+        // Mostrar menú principal
+        mainMenu.style.display = "block";
+        // Ocultar controles
+        controlsPanel.style.display = "none";
+        
+       // Destruir instancia de la app y limpiar
+        if (currentApp) {
+            currentApp.destroy(); // Asegúrate de tener este método en tu clase App
+            const container = document.getElementById("app-container");
+            container?.remove();
+            currentApp = null;
+        }
+    
+        // Limpiar selección actual
+        currentSelection.textContent = "";
+    });
+  
+    function loadApp(option: string) {
+        const container = document.getElementById("app-container") || document.createElement("div");
+        container.id = "app-container";
+        if (!document.body.contains(container)) {
+            document.body.appendChild(container);
+        }
+        
+        import("./app").then(module => {
+            currentApp = new module.App(option);
+            currentApp.init();
+        });
+    }
+  
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            backButton.click();
+        }
+    });
   });
-
-  function loadApp(option) {
-      const container = document.getElementById("app-container");
-      if (!container) {
-          const newContainer = document.createElement("div");
-          newContainer.id = "app-container";
-          document.body.appendChild(newContainer);
-      } else {
-          container.innerHTML = ""; // Limpia la escena
-      }
-
-      import("./app.js").then(module => {
-          const app = new module.App(option);
-          app.init();
-      });
-  }
-
-  document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-          buttonContainer.style.display = "flex"; // Muestra el menú
-      }
-  });
-});

@@ -43,6 +43,14 @@ export class App {
         window.addEventListener('wheel', (event) => this.onZoom(event));
     }
 
+    public destroy(): void {
+        this.gui.destroy();
+        this.renderer.dispose();
+        window.removeEventListener('resize', this.onResize);
+        window.removeEventListener('keydown', this.onKeyDown);
+        window.removeEventListener('wheel', this.onZoom);
+    }
+
     public init(): void {
         this.createScene();
         this.setupGUI();
@@ -135,18 +143,8 @@ export class App {
             this.gui.add(this.activeMaterial.uniforms.waveAmplitude, 'value', 0, 0.5).name('Wave Amp');
             this.gui.add(this.activeMaterial.uniforms.waveSpeed, 'value', 0, 3).name('Wave Speed');
             this.gui.add(this.activeMaterial.uniforms.toonLevels, 'value', 1, 10).step(1).name('Toon Levels');
-            
-            // Agrega controles de color
-            const lightColor = { color: '#ffffff' };
-            const materialColor = { color: '#3399ff' };
-            
-            this.gui.addColor(lightColor, 'color').onChange(val => {
-                this.activeMaterial.uniforms.lightColor.value.setHex(val);
-            }).name('Light Color');
-            
-            this.gui.addColor(materialColor, 'color').onChange(val => {
-                this.activeMaterial.uniforms.materialColor.value.setHex(val);
-            }).name('Material Color');
+            this.gui.addColor({ color: '#ffffff' }, 'color').onChange(val => this.activeMaterial.uniforms.lightColor.value.set(val)).name('Light Color');
+            this.gui.addColor({ color: '#3399ff' }, 'color').onChange(val => this.activeMaterial.uniforms.materialColor.value.set(val)).name('Material Color');
         } else if (this.activeMaterial === this.blinnPhongMaterial) {
             this.gui.add(this.activeMaterial.uniforms.shininess, 'value', 1, 128).name('Shininess');
             this.gui.addColor({ color: '#ffffff' }, 'color').onChange(val => this.activeMaterial.uniforms.lightColor.value.set(val)).name('Light Color');
@@ -161,6 +159,12 @@ export class App {
 
     private animate(): void {
         requestAnimationFrame(() => this.animate());
+
+        // Añadir rotación continua
+        if (this.option === 'creative') {
+            this.mesh.rotation.y += 0.005;
+        }
+
 
        this.activeMaterial.uniforms.time.value = (Date.now() - this.startTime) / 1000;
         this.renderer.render(this.scene, this.camera);
