@@ -136,7 +136,7 @@ export class App {
 
         if (this.activeMaterial === this.waveMaterial) {
             this.gui.add(this.activeMaterial.uniforms.amplitude, 'value', 0, 1).name('Amplitude');
-            this.gui.add(this.activeMaterial.uniforms.frequency, 'value', 1, 10).name('Frequency');
+            this.gui.add(this.activeMaterial.uniforms.frequency, 'value', 1, 20).name('Frequency');
             this.gui.add(this.activeMaterial.uniforms.smoothness, 'value', 0.1, 2).name('Smoothness');
         } else if (this.activeMaterial === this.creativeMaterial) {
             this.gui.add(this.activeMaterial.uniforms.inflate, 'value', 0, 1).name('Inflate');
