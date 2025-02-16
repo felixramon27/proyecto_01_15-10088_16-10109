@@ -144,6 +144,10 @@ button:nth-child(3) { background: linear-gradient(135deg, #ff6b6b, #ff5252); }
   font-weight: 300;
 }
 
+.container {
+  text-align: center;
+}
+
 .divider {
   height: 2px;
   background: linear-gradient(90deg, 
